@@ -41,7 +41,7 @@ logging:
     com.middaymeal: INFO
     org.springframework.security: WARN
     org.hibernate.SQL: INFO
-    com.zaxxer.hikari: DEBUG
+    com.zaxxer.hikari: INFO
 
 app:
   upload:
