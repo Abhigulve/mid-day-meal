@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database - Start this first
+  postgres:
+    image: postgres:14-alpine
+    container_name: middaymeal-postgres-simple
+    environment:
+      POSTGRES_DB: middaymeal_db
+      POSTGRES_USER: middaymeal_user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/sample_data.sql:/docker-entrypoint-initdb.d/02-sample_data.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U middaymeal_user -d middaymeal_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Single Application Container
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.single
+    container_name: middaymeal-app
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/middaymeal_db
+      - SPRING_DATASOURCE_USERNAME=middaymeal_user
+      - SPRING_DATASOURCE_PASSWORD=password
+      - JWT_SECRET=mySecretKeyForJWTTokenGenerationAndValidation123456789
+      - SPRING_PROFILES_ACTIVE=production
+    ports:
+      - "80:80"     # Nginx frontend
+      - "8080:8080" # Spring Boot backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - middaymeal-network
+
+volumes:
+  postgres_data:
+
+networks:
+  middaymeal-network:
+    driver: bridge
