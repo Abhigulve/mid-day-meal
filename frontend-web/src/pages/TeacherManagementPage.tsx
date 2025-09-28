@@ -124,35 +124,50 @@ const TeacherManagementPage: React.FC = () => {
 
   const fetchSchools = async () => {
     try {
-      // Start with empty schools list - admin will add schools as needed
+      // Load schools from localStorage (where they're saved when created)
+      const savedSchools = localStorage.getItem('schools_data');
+      
+      if (savedSchools) {
+        const parsedSchools = JSON.parse(savedSchools);
+        setSchools(parsedSchools);
+        console.log('Schools loaded from localStorage:', parsedSchools);
+        return;
+      }
+
+      // If no saved schools, start with empty list (clean production start)
       setSchools([]);
-      console.log('Schools initialized as empty - ready for admin to add schools');
+      console.log('No schools found - starting with empty list');
     } catch (error) {
       console.error('Error loading schools:', error);
-      showSnackbar('Failed to load schools', 'error');
       setSchools([]);
     }
   };
 
   const createSchool = async () => {
     try {
-      // Create school locally (simulated)
-      const newSchoolData = {
+      // Create school data
+      const schoolData = {
         id: Date.now(),
         name: newSchool.name,
         code: newSchool.code,
+        address: newSchool.address,
         city: newSchool.city,
         state: newSchool.state,
-        address: newSchool.address,
         phone: newSchool.phone,
         email: newSchool.email,
-        principalName: newSchool.principalName
+        principalName: newSchool.principalName,
+        totalStudents: 0,
+        active: true
       };
       
       // Add to local schools list
-      setSchools(prev => [...prev, newSchoolData]);
+      const updatedSchools = [...schools, schoolData];
+      setSchools(updatedSchools);
       
-      showSnackbar(`School created successfully! (Demo mode)`, 'success');
+      // Save to localStorage for persistence
+      localStorage.setItem('schools_data', JSON.stringify(updatedSchools));
+      
+      showSnackbar(`School created successfully!`, 'success');
       setSchoolDialogOpen(false);
       setNewSchool({ name: '', code: '', city: '', state: '', address: '', phone: '', email: '', principalName: '' });
     } catch (error: any) {
@@ -209,6 +224,8 @@ const TeacherManagementPage: React.FC = () => {
         showSnackbar('Teacher updated successfully (demo mode)', 'success');
       } else {
         // Create new teacher (simulated)
+        const schoolInfo = formData.schoolId ? schools.find(s => s.id === formData.schoolId) : null;
+        
         const newTeacher = {
           id: Date.now(),
           username: formData.username,
@@ -216,12 +233,32 @@ const TeacherManagementPage: React.FC = () => {
           email: formData.email,
           phone: formData.phone,
           role: formData.role,
-          school: formData.schoolId ? schools.find(s => s.id === formData.schoolId) : null,
+          school: schoolInfo,
           active: true,
           createdAt: new Date().toISOString()
         };
         
+        // Add to display list
         setTeachers(prev => [...prev, newTeacher as Teacher]);
+        
+        // Save to localStorage for authentication
+        const savedTeachers = localStorage.getItem('created_teachers');
+        const teachersList = savedTeachers ? JSON.parse(savedTeachers) : [];
+        teachersList.push({
+          username: formData.username,
+          password: formData.password,
+          fullName: formData.fullName,
+          role: formData.role,
+          schoolName: schoolInfo?.name || null
+        });
+        localStorage.setItem('created_teachers', JSON.stringify(teachersList));
+        
+        console.log('Teacher created and saved to localStorage:', {
+          username: formData.username,
+          password: formData.password,
+          fullName: formData.fullName
+        });
+        
         showSnackbar(`Teacher created successfully! Login: ${formData.username} / ${formData.password}`, 'success');
       }
       

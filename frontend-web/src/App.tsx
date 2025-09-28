@@ -15,6 +15,7 @@ import MenusPage from './pages/MenusPage';
 import MealRecordsPage from './pages/MealRecordsPage';
 import ReportsPage from './pages/ReportsPage';
 import TeacherManagementPage from './pages/TeacherManagementPage';
+import SchoolManagementPage from './pages/SchoolManagementPage';
 
 const theme = createTheme({
   palette: {
@@ -84,6 +85,7 @@ function App() {
               <Route path="meal-records" element={<MealRecordsPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="teachers" element={<TeacherManagementPage />} />
+              <Route path="schools" element={<SchoolManagementPage />} />
             </Route>
           </Routes>
         </Router>

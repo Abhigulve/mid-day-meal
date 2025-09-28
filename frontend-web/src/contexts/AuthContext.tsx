@@ -51,6 +51,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (username: string, password: string): Promise<boolean> => {
     setLoading(true);
     
+    console.log('=== LOGIN ATTEMPT ===');
+    console.log('Username:', username);
+    console.log('Password:', password);
+    
     try {
       // Check if it's the default admin user first
       if (username === 'admin' && password === 'admin123') {
@@ -69,15 +73,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return true;
       }
       
-      // For database users, we'll simulate the authentication
-      // In a real system, this would call the backend API
-      const knownUsers = [
-        { username: 'teacher_gade001', password: 'P@ssw0rd', fullName: 'गाडे वस्ती शिक्षक', role: 'TEACHER', schoolName: 'गाडे वस्ती प्राथमिक शाळा' },
-        { username: 'teacher_gps001', password: 'teacher123', fullName: 'Mr. Ganesh Bhosale', role: 'TEACHER', schoolName: 'Government Primary School Pimpri' },
-        { username: 'principal_gps001', password: 'principal123', fullName: 'Mrs. Sunita Sharma', role: 'SCHOOL_ADMIN', schoolName: 'Government Primary School Pimpri' }
-      ];
+      // Check localStorage for created teachers first
+      const savedTeachers = localStorage.getItem('created_teachers');
+      let foundUser = null;
       
-      const foundUser = knownUsers.find(u => u.username === username && u.password === password);
+      console.log('Checking localStorage for teachers:', savedTeachers);
+      
+      if (savedTeachers) {
+        try {
+          const teachers = JSON.parse(savedTeachers);
+          console.log('Parsed teachers:', teachers);
+          console.log(`Looking for username: ${username}, password: ${password}`);
+          
+          foundUser = teachers.find((teacher: any) => 
+            teacher.username === username && teacher.password === password
+          );
+          
+          console.log('Found user in localStorage:', foundUser);
+        } catch (error) {
+          console.error('Error parsing saved teachers:', error);
+        }
+      } else {
+        console.log('No saved teachers found in localStorage');
+      }
+      
+      // If not found in localStorage, check hardcoded users
+      if (!foundUser) {
+        const knownUsers = [
+          { username: 'teacher_gade001', password: 'P@ssw0rd', fullName: 'गाडे वस्ती शिक्षक', role: 'TEACHER', schoolName: 'गाडे वस्ती प्राथमिक शाळा' },
+          { username: 'teacher_gps001', password: 'teacher123', fullName: 'Mr. Ganesh Bhosale', role: 'TEACHER', schoolName: 'Government Primary School Pimpri' },
+          { username: 'principal_gps001', password: 'principal123', fullName: 'Mrs. Sunita Sharma', role: 'SCHOOL_ADMIN', schoolName: 'Government Primary School Pimpri' }
+        ];
+        
+        foundUser = knownUsers.find(u => u.username === username && u.password === password);
+      }
       
       if (foundUser) {
         const authUser: User = {
