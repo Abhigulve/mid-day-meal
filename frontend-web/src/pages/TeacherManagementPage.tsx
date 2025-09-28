@@ -111,12 +111,22 @@ const TeacherManagementPage: React.FC = () => {
   const fetchTeachers = async () => {
     try {
       setLoading(true);
-      // Start with empty teachers list - admin will create teachers as needed
-      setTeachers([]);
-      console.log('Teachers initialized as empty - ready for admin to create teachers');
+      
+      // Fetch teachers from the API (PostgreSQL database)
+      const response = await ApiService.getUsers();
+      const allUsers = response.data;
+      
+      // Filter for teachers and staff roles only
+      const teachersAndStaff = allUsers.filter((user: any) => 
+        ['TEACHER', 'SCHOOL_ADMIN', 'COOK', 'SUPERVISOR'].includes(user.role)
+      );
+      
+      setTeachers(teachersAndStaff);
+      console.log('Teachers loaded from database:', teachersAndStaff);
     } catch (error) {
-      console.error('Error loading teachers:', error);
-      showSnackbar('Failed to load teachers', 'error');
+      console.error('Error loading teachers from API:', error);
+      showSnackbar('Failed to load teachers from database', 'error');
+      setTeachers([]);
     } finally {
       setLoading(false);
     }
@@ -124,21 +134,13 @@ const TeacherManagementPage: React.FC = () => {
 
   const fetchSchools = async () => {
     try {
-      // Load schools from localStorage (where they're saved when created)
-      const savedSchools = localStorage.getItem('schools_data');
-      
-      if (savedSchools) {
-        const parsedSchools = JSON.parse(savedSchools);
-        setSchools(parsedSchools);
-        console.log('Schools loaded from localStorage:', parsedSchools);
-        return;
-      }
-
-      // If no saved schools, start with empty list (clean production start)
-      setSchools([]);
-      console.log('No schools found - starting with empty list');
+      // Fetch schools from the API (PostgreSQL database)
+      const response = await ApiService.getSchools();
+      setSchools(response.data);
+      console.log('Schools loaded from database:', response.data);
     } catch (error) {
-      console.error('Error loading schools:', error);
+      console.error('Error loading schools from API:', error);
+      showSnackbar('Failed to load schools from database', 'error');
       setSchools([]);
     }
   };
@@ -147,7 +149,6 @@ const TeacherManagementPage: React.FC = () => {
     try {
       // Create school data
       const schoolData = {
-        id: Date.now(),
         name: newSchool.name,
         code: newSchool.code,
         address: newSchool.address,
@@ -160,19 +161,19 @@ const TeacherManagementPage: React.FC = () => {
         active: true
       };
       
-      // Add to local schools list
-      const updatedSchools = [...schools, schoolData];
-      setSchools(updatedSchools);
+      // Save to database via API
+      const response = await ApiService.createSchool(schoolData);
+      const createdSchool = response.data;
       
-      // Save to localStorage for persistence
-      localStorage.setItem('schools_data', JSON.stringify(updatedSchools));
+      // Add to local schools list for immediate UI update
+      setSchools([...schools, createdSchool]);
       
       showSnackbar(`School created successfully!`, 'success');
       setSchoolDialogOpen(false);
       setNewSchool({ name: '', code: '', city: '', state: '', address: '', phone: '', email: '', principalName: '' });
     } catch (error: any) {
       console.error('Error creating school:', error);
-      showSnackbar('Failed to create school', 'error');
+      showSnackbar('Failed to create school: ' + (error.response?.data || error.message), 'error');
     }
   };
 
@@ -220,64 +221,79 @@ const TeacherManagementPage: React.FC = () => {
   const handleSubmit = async () => {
     try {
       if (editingTeacher) {
-        // Update existing teacher (simulated)
-        showSnackbar('Teacher updated successfully (demo mode)', 'success');
-      } else {
-        // Create new teacher (simulated)
-        const schoolInfo = formData.schoolId ? schools.find(s => s.id === formData.schoolId) : null;
-        
-        const newTeacher = {
-          id: Date.now(),
+        // Update existing teacher via API
+        const updateData = {
           username: formData.username,
           fullName: formData.fullName,
           email: formData.email,
           phone: formData.phone,
           role: formData.role,
-          school: schoolInfo,
-          active: true,
-          createdAt: new Date().toISOString()
+          schoolId: formData.schoolId,
+          active: true
         };
         
-        // Add to display list
-        setTeachers(prev => [...prev, newTeacher as Teacher]);
+        // Add password only if provided
+        if (formData.password) {
+          updateData.password = formData.password;
+        }
         
-        // Save to localStorage for authentication
-        const savedTeachers = localStorage.getItem('created_teachers');
-        const teachersList = savedTeachers ? JSON.parse(savedTeachers) : [];
-        teachersList.push({
+        const response = await ApiService.updateUser(editingTeacher.id, updateData);
+        const updatedTeacher = response.data;
+        
+        // Update local list for immediate UI update
+        setTeachers(teachers.map(t => t.id === editingTeacher.id ? updatedTeacher : t));
+        
+        showSnackbar('Teacher updated successfully!', 'success');
+      } else {
+        // Create new teacher via API
+        const teacherData = {
           username: formData.username,
           password: formData.password,
           fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
           role: formData.role,
-          schoolName: schoolInfo?.name || null
-        });
-        localStorage.setItem('created_teachers', JSON.stringify(teachersList));
+          schoolId: formData.schoolId
+        };
         
-        console.log('Teacher created and saved to localStorage:', {
+        const response = await ApiService.createUser(teacherData);
+        const createdTeacher = response.data;
+        
+        // Add to local list for immediate UI update
+        setTeachers([...teachers, createdTeacher]);
+        
+        console.log('Teacher created and saved to database:', {
+          id: createdTeacher.id,
           username: formData.username,
-          password: formData.password,
           fullName: formData.fullName
         });
         
-        showSnackbar(`Teacher created successfully! Login: ${formData.username} / ${formData.password}`, 'success');
+        showSnackbar(`Teacher created successfully! Username: ${formData.username}`, 'success');
       }
       
       handleCloseDialog();
     } catch (error: any) {
       console.error('Error saving teacher:', error);
-      showSnackbar('Failed to save teacher', 'error');
+      const errorMessage = error.response?.data || error.message || 'Unknown error';
+      showSnackbar(`Failed to save teacher: ${errorMessage}`, 'error');
     }
   };
 
   const handleDelete = async (teacherId: number) => {
     if (window.confirm('Are you sure you want to delete this teacher?')) {
       try {
-        // Remove teacher from local state (simulated delete)
-        setTeachers(prev => prev.filter(teacher => teacher.id !== teacherId));
-        showSnackbar('Teacher deleted successfully (demo mode)', 'success');
-      } catch (error) {
+        // Delete teacher via API
+        await ApiService.deleteUser(teacherId);
+        
+        // Remove from local list for immediate UI update
+        const updatedTeachers = teachers.filter(teacher => teacher.id !== teacherId);
+        setTeachers(updatedTeachers);
+        
+        showSnackbar('Teacher deleted successfully', 'success');
+      } catch (error: any) {
         console.error('Error deleting teacher:', error);
-        showSnackbar('Failed to delete teacher', 'error');
+        const errorMessage = error.response?.data || error.message || 'Unknown error';
+        showSnackbar(`Failed to delete teacher: ${errorMessage}`, 'error');
       }
     }
   };
