@@ -10,7 +10,7 @@ RUN mvn dependency:go-offline -B
 
 # Copy source code and build
 COPY backend/src ./src
-RUN mvn clean package -DskipTests
+RUN mvn clean package -DskipTests -Dspring.profiles.active=railway
 
 # Runtime stage
 FROM eclipse-temurin:17-jre

@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: midday-meal-backend
+  
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/middaymeal_db}
+    username: ${PGUSER:middaymeal_user}
+    password: ${PGPASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  
+  security:
+    jwt:
+      secret-key: ${JWT_SECRET:mySecretKeyForJWTTokenGenerationAndValidation123456789}
+      expiration: 86400000
+
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /api
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    com.middaymeal: INFO
+    org.springframework.security: INFO
+    org.hibernate.SQL: INFO
+
+app:
+  upload:
+    dir: uploads/
+  supported:
+    languages: en,mr
+  default:
+    language: en
