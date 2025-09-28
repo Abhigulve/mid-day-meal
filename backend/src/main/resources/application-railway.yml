@@ -3,7 +3,9 @@ spring:
     name: midday-meal-backend
   
   datasource:
-    url: postgresql://postgres:IPDAurNsCyuUlLpaMKayGYuyyDFtJGjh@caboose.proxy.rlwy.net:10905/railway
+    url: jdbc:postgresql://caboose.proxy.rlwy.net:10905/railway
+    username: postgres
+    password: IPDAurNsCyuUlLpaMKayGYuyyDFtJGjh
     driver-class-name: org.postgresql.Driver
   
   jpa:
