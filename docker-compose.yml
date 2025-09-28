@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: middaymeal-postgres
+    environment:
+      POSTGRES_DB: middaymeal_db
+      POSTGRES_USER: middaymeal_user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/sample_data.sql:/docker-entrypoint-initdb.d/02-sample_data.sql
+    networks:
+      - middaymeal-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U middaymeal_user -d middaymeal_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Spring Boot Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: middaymeal-backend
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/middaymeal_db
+      - SPRING_DATASOURCE_USERNAME=middaymeal_user
+      - SPRING_DATASOURCE_PASSWORD=password
+      - JWT_SECRET=mySecretKeyForJWTTokenGenerationAndValidation123456789
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - middaymeal-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # React Web Frontend
+  frontend-web:
+    build:
+      context: ./frontend-web
+      dockerfile: Dockerfile
+    container_name: middaymeal-frontend-web
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080/api
+      - REACT_APP_APP_NAME=Mid-Day Meal Management
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - middaymeal-network
+
+  # Nginx Reverse Proxy (Optional - for production-like setup)
+  nginx:
+    image: nginx:alpine
+    container_name: middaymeal-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
+      - frontend-web
+    networks:
+      - middaymeal-network
+
+volumes:
+  postgres_data:
+
+networks:
+  middaymeal-network:
+    driver: bridge
