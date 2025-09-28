@@ -1,4 +1,18 @@
-# Simple deployment Dockerfile for Railway
+# Multi-stage build for Railway deployment
+FROM maven:3.8-openjdk-17 AS build
+
+# Set working directory
+WORKDIR /app
+
+# Copy pom.xml and download dependencies
+COPY backend/pom.xml ./
+RUN mvn dependency:go-offline -B
+
+# Copy source code and build
+COPY backend/src ./src
+RUN mvn clean package -DskipTests
+
+# Runtime stage
 FROM eclipse-temurin:17-jre
 
 # Install curl for health checks
@@ -7,8 +21,8 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # Set working directory
 WORKDIR /app
 
-# Copy the pre-built JAR (you'll need to build this first)
-COPY backend/target/midday-meal-backend-1.0.0.jar app.jar
+# Copy JAR from build stage
+COPY --from=build /app/target/midday-meal-backend-1.0.0.jar app.jar
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser
