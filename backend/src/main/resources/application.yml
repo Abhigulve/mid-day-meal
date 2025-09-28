@@ -3,9 +3,9 @@ spring:
     name: midday-meal-backend
   
   datasource:
-    url: jdbc:postgresql://localhost:5432/middaymeal_db
-    username: ${DB_USERNAME:middaymeal_user}
-    password: ${DB_PASSWORD:password}
+    url: ${DATABASE_URL:${DATABASE_PUBLIC_URL:jdbc:postgresql://localhost:5432/middaymeal_db}}
+    username: ${POSTGRES_USER:${DB_USERNAME:middaymeal_user}}
+    password: ${POSTGRES_PASSWORD:${DB_PASSWORD:password}}
     driver-class-name: org.postgresql.Driver
   
   jpa:
