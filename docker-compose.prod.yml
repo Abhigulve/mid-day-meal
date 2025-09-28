@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database with Production Setup
+  postgres:
+    image: postgres:14-alpine
+    container_name: middaymeal-postgres-prod
+    environment:
+      POSTGRES_DB: middaymeal_db
+      POSTGRES_USER: middaymeal_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ProductionPassword123!}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/production_setup.sql:/docker-entrypoint-initdb.d/02-production_setup.sql
+    networks:
+      - middaymeal-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U middaymeal_user -d middaymeal_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Spring Boot Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: middaymeal-backend-prod
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/middaymeal_db
+      - SPRING_DATASOURCE_USERNAME=middaymeal_user
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-ProductionPassword123!}
+      - JWT_SECRET=${JWT_SECRET:-ProductionJWTSecretKey123456789012345678901234567890}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
+      - SPRING_JPA_SHOW_SQL=false
+      - LOGGING_LEVEL_COM_MIDDAYMEAL=INFO
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - middaymeal-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # React Web Frontend
+  frontend-web:
+    build:
+      context: ./frontend-web
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=${API_URL:-http://localhost:8080/api}
+        - REACT_APP_APP_NAME=Mid-Day Meal Management
+        - NODE_ENV=production
+    container_name: middaymeal-frontend-web-prod
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - middaymeal-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy for Production
+  nginx:
+    image: nginx:alpine
+    container_name: middaymeal-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend-web
+    networks:
+      - middaymeal-network
+    restart: unless-stopped
+
+volumes:
+  postgres_prod_data:
+
+networks:
+  middaymeal-network:
+    driver: bridge

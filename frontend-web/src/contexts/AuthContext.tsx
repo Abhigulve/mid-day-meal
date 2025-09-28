@@ -52,41 +52,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(true);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Get users from localStorage (in real app, this would be an API call)
-      const users = JSON.parse(localStorage.getItem('users_data') || '[]');
-      const schools = JSON.parse(localStorage.getItem('schools_data') || '[]');
-      
-      // Find user (in real app, password would be hashed and verified server-side)
-      const foundUser = users.find((u: any) => u.username === username && u.active);
-      
-      if (foundUser) {
-        // In real app, verify password hash here
-        // For demo, we'll accept any password for existing users
-        
-        // Get school name if user is associated with a school
-        const school = foundUser.school_id ? schools.find((s: any) => s.id === foundUser.school_id) : null;
-        
-        const authUser: User = {
-          id: foundUser.id,
-          username: foundUser.username,
-          full_name: foundUser.full_name,
-          email: foundUser.email,
-          role: foundUser.role,
-          school_id: foundUser.school_id,
-          school_name: school?.name,
-          active: foundUser.active
-        };
-        
-        setUser(authUser);
-        localStorage.setItem('current_user', JSON.stringify(authUser));
-        setLoading(false);
-        return true;
-      }
-      
-      // Check if it's the default admin user
+      // Check if it's the default admin user first
       if (username === 'admin' && password === 'admin123') {
         const adminUser: User = {
           id: 0,
@@ -99,6 +65,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         setUser(adminUser);
         localStorage.setItem('current_user', JSON.stringify(adminUser));
+        setLoading(false);
+        return true;
+      }
+      
+      // For database users, we'll simulate the authentication
+      // In a real system, this would call the backend API
+      const knownUsers = [
+        { username: 'teacher_gade001', password: 'P@ssw0rd', fullName: 'गाडे वस्ती शिक्षक', role: 'TEACHER', schoolName: 'गाडे वस्ती प्राथमिक शाळा' },
+        { username: 'teacher_gps001', password: 'teacher123', fullName: 'Mr. Ganesh Bhosale', role: 'TEACHER', schoolName: 'Government Primary School Pimpri' },
+        { username: 'principal_gps001', password: 'principal123', fullName: 'Mrs. Sunita Sharma', role: 'SCHOOL_ADMIN', schoolName: 'Government Primary School Pimpri' }
+      ];
+      
+      const foundUser = knownUsers.find(u => u.username === username && u.password === password);
+      
+      if (foundUser) {
+        const authUser: User = {
+          id: Date.now(),
+          username: foundUser.username,
+          full_name: foundUser.fullName,
+          email: `${foundUser.username}@school.com`,
+          role: foundUser.role as any,
+          school_name: foundUser.schoolName,
+          active: true
+        };
+        
+        setUser(authUser);
+        localStorage.setItem('current_user', JSON.stringify(authUser));
         setLoading(false);
         return true;
       }

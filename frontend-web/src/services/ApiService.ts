@@ -14,6 +14,12 @@ class ApiService {
       },
     });
 
+    // Set auth token if available
+    const token = localStorage.getItem('token');
+    if (token) {
+      this.setAuthToken(token);
+    }
+
     this.api.interceptors.response.use(
       (response) => response,
       (error) => {
@@ -147,6 +153,44 @@ class ApiService {
     return this.api.get(`/reports/${type}`, { params });
   }
 
+  // User endpoints
+  async getUsers(): Promise<AxiosResponse> {
+    return this.api.get('/users');
+  }
+
+  async getUserById(id: number): Promise<AxiosResponse> {
+    return this.api.get(`/users/${id}`);
+  }
+
+  async createUser(user: any): Promise<AxiosResponse> {
+    return this.api.post('/users', user);
+  }
+
+  async updateUser(id: number, user: any): Promise<AxiosResponse> {
+    return this.api.put(`/users/${id}`, user);
+  }
+
+  async deleteUser(id: number): Promise<AxiosResponse> {
+    return this.api.delete(`/users/${id}`);
+  }
+
+  // Generic GET/POST/PUT/DELETE methods
+  async get(url: string): Promise<AxiosResponse> {
+    return this.api.get(url);
+  }
+
+  async post(url: string, data: any): Promise<AxiosResponse> {
+    return this.api.post(url, data);
+  }
+
+  async put(url: string, data: any): Promise<AxiosResponse> {
+    return this.api.put(url, data);
+  }
+
+  async delete(url: string): Promise<AxiosResponse> {
+    return this.api.delete(url);
+  }
+
   // Upload endpoint
   async uploadFile(file: FormData): Promise<AxiosResponse> {
     return this.api.post('/upload', file, {
@@ -157,4 +201,6 @@ class ApiService {
   }
 }
 
-export const apiService = new ApiService();
+const ApiServiceInstance = new ApiService();
+export const apiService = ApiServiceInstance;
+export default ApiServiceInstance;

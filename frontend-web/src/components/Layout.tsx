@@ -43,6 +43,7 @@ const getMenuItemsForRole = (role: string, isAdmin: boolean, isSchoolAdmin: bool
   const adminItems = [
     { text: 'सिस्टम डॅशबोर्ड (System Dashboard)', icon: <Dashboard />, path: '/dashboard', roles: ['ADMIN'] },
     { text: 'शाळा व्यवस्थापन (Schools Management)', icon: <School />, path: '/schools', roles: ['ADMIN'] },
+    { text: 'शिक्षक व्यवस्थापन (Teacher Management)', icon: <AccountCircle />, path: '/teachers', roles: ['ADMIN'] },
     { text: 'सिस्टम अहवाल (System Reports)', icon: <Assessment />, path: '/reports', roles: ['ADMIN'] },
   ];
 
